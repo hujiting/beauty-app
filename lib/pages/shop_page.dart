@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
+
+import '../theme/app_theme.dart';
+import '../widgets/common.dart';
 import '../data.dart';
 
 class ShopPage extends StatefulWidget {
@@ -10,9 +15,9 @@ class ShopPage extends StatefulWidget {
 
 class _ShopPageState extends State<ShopPage> {
   String _selectedCat = '全部';
-  final TextEditingController _searchController = TextEditingController();
+  final _searchController = TextEditingController();
 
-  final List<String> _categories = ['全部', '配饰', '包袋', '发饰', '美甲', '首饰', '帽子'];
+  final _categories = ['全部', '配饰', '包袋', '发饰', '美甲', '首饰', '帽子'];
 
   List<Product> get _filtered {
     if (_selectedCat == '全部') return products;
@@ -28,66 +33,47 @@ class _ShopPageState extends State<ShopPage> {
           children: [
             const SizedBox(height: 12),
 
-            // Search bar
+            // 搜索栏 - 点击跳转搜索页或展开搜索
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F3),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 14),
-                    const Icon(Icons.search, size: 20, color: Color(0xFF999999)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: const InputDecoration(
-                          hintText: '搜索好物',
-                          hintStyle: TextStyle(fontSize: 14, color: Color(0xFFBBBBBB)),
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                  ],
+              child: GestureDetector(
+                onTap: () {},
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F3),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.search, size: 20, color: AppTheme.textHint),
+                      SizedBox(width: 8),
+                      Text('搜索好物',
+                          style: TextStyle(
+                              fontSize: 14, color: AppTheme.textMute)),
+                    ],
+                  ),
                 ),
               ),
             ),
 
             const SizedBox(height: 16),
 
-            // Category pills
+            // 分类胶囊
             SizedBox(
               height: 36,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: _categories.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemCount: _categories.length,
                 itemBuilder: (context, i) {
                   final cat = _categories[i];
-                  final active = cat == _selectedCat;
-                  return GestureDetector(
+                  return CategoryPill(
+                    label: cat,
+                    active: cat == _selectedCat,
                     onTap: () => setState(() => _selectedCat = cat),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: active ? Colors.black : Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: active ? null : Border.all(color: const Color(0xFFE8E8E4)),
-                      ),
-                      child: Text(
-                        cat,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: active ? Colors.white : const Color(0xFF666666),
-                          fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      ),
-                    ),
                   );
                 },
               ),
@@ -95,7 +81,7 @@ class _ShopPageState extends State<ShopPage> {
 
             const SizedBox(height: 16),
 
-            // Products grid
+            // 商品网格
             Expanded(
               child: GridView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -106,7 +92,8 @@ class _ShopPageState extends State<ShopPage> {
                   childAspectRatio: 0.68,
                 ),
                 itemCount: _filtered.length,
-                itemBuilder: (context, i) => _buildProductCard(_filtered[i]),
+                itemBuilder: (context, i) =>
+                    _ProductCard(product: _filtered[i], index: i),
               ),
             ),
           ],
@@ -114,28 +101,29 @@ class _ShopPageState extends State<ShopPage> {
       ),
     );
   }
+}
 
-  static const Map<String, List<Color>> _catGradients = {
-    '包袋': [Color(0xFFE8D5D5), Color(0xFFD4A5A5)],
-    '配饰': [Color(0xFFF0E6D6), Color(0xFFC9B99A)],
-    '发饰': [Color(0xFFD4A5A5), Color(0xFFB88A8A)],
-    '美甲': [Color(0xFFE8D5D5), Color(0xFFF0E6D6)],
-    '首饰': [Color(0xFFC9B99A), Color(0xFFB88A8A)],
-    '帽子': [Color(0xFFB88A8A), Color(0xFFD4A5A5)],
-  };
+class _ProductCard extends StatelessWidget {
+  final Product product;
+  final int index;
 
-  Widget _buildProductCard(Product p) {
-    final gradient = _catGradients[p.category] ?? [const Color(0xFFE8D5D5), const Color(0xFFC9B99A)];
+  const _ProductCard({required this.product, required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    final gradient = AppTheme.catGradients[product.category] ??
+        [AppTheme.primary, AppTheme.accent];
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF0F0EC)),
+        borderRadius: BorderRadius.circular(AppTheme.radiusM),
+        border: const Border.all(color: AppTheme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Gradient top
+          // 渐变顶部
           Stack(
             children: [
               Container(
@@ -146,40 +134,63 @@ class _ShopPageState extends State<ShopPage> {
                     end: Alignment.bottomRight,
                     colors: gradient,
                   ),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(AppTheme.radiusM)),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  product.name.substring(0, 1),
+                  style: const TextStyle(
+                      fontSize: 40, color: Colors.white70),
                 ),
               ),
               Positioned(
                 top: 8,
                 left: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusS),
                   ),
-                  child: Text(p.category, style: const TextStyle(fontSize: 10, color: Color(0xFF666666))),
+                  child: Text(product.category,
+                      style: const TextStyle(
+                          fontSize: 10, color: AppTheme.textSecondary)),
                 ),
               ),
             ],
           ),
 
-          // Info
+          // 信息区
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(p.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF222222))),
+                Text(product.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary)),
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Text('¥${p.price}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFC46B8A))),
+                    Text('¥${product.price}',
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.highlight)),
                     const SizedBox(width: 6),
-                    if (p.originalPrice > p.price)
+                    if (product.originalPrice > product.price)
                       Text(
-                        '¥${p.originalPrice}',
-                        style: const TextStyle(fontSize: 11, color: Color(0xFFBBBBBB), decoration: TextDecoration.lineThrough),
+                        '¥${product.originalPrice}',
+                        style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMute,
+                            decoration: TextDecoration.lineThrough),
                       ),
                   ],
                 ),
@@ -188,6 +199,11 @@ class _ShopPageState extends State<ShopPage> {
           ),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 300.ms, delay: (index * 50).ms).scale(
+          begin: const Offset(0.96, 0.96),
+          end: const Offset(1.0, 1.0),
+          duration: 300.ms,
+          curve: Curves.easeOut,
+        );
   }
 }

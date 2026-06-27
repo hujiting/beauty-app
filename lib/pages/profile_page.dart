@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../theme/app_theme.dart';
+import '../widgets/common.dart';
+import '../providers/app_state.dart';
 import 'capture_page.dart';
 import 'wellness_page.dart';
 
@@ -7,124 +14,92 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildUserInfoCard(),
-            const SizedBox(height: 16),
-            _buildStyleCard(),
-            const SizedBox(height: 16),
-            _buildMenuList(),
-          ],
+      backgroundColor: AppTheme.bgWhite,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppTheme.spaceL),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _UserInfoCard(),
+              const SizedBox(height: 16),
+              _StyleCard(),
+              const SizedBox(height: 16),
+              _StatRow(),
+              const SizedBox(height: 20),
+              const SectionHeader(title: '我的服务'),
+              const SizedBox(height: 12),
+              _MenuList(),
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildUserInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+// 用户信息卡
+class _UserInfoCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+
+    return AppCard(
+      onTap: () {}, // TODO: 编辑资料页
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFD4A5A5), Color(0xFFC9B99A)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  '\u{1F469}',
-                  style: TextStyle(fontSize: 28),
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Beauty\u7528\u6237',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '\u627e\u5230\u5c5e\u4e8e\u81ea\u5df1\u7684\u7f8e',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF999999),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            width: 64,
+            height: 64,
             decoration: const BoxDecoration(
-              border: Border(
-                top: BorderSide(color: Color(0xFFF0F0F0)),
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [AppTheme.primary, AppTheme.accent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            alignment: Alignment.center,
+            child: const Text('👤', style: TextStyle(fontSize: 28)),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _StatItem(count: '12', label: '\u6536\u85cf'),
-                _StatItem(count: '5', label: '\u5173\u6ce8'),
-                _StatItem(count: '8', label: '\u83b7\u8d5e'),
+                Text(appState.userName,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(appState.userBio,
+                    style: const TextStyle(
+                        fontSize: 13, color: AppTheme.textHint)),
               ],
             ),
           ),
+          const Icon(Icons.chevron_right, color: AppTheme.textMute),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 400.ms).slideY(
+          begin: 0.1,
+          end: 0,
+          duration: 400.ms,
+          curve: Curves.easeOut,
+        );
   }
+}
 
-  Widget _buildStyleCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFF0E6D6), Colors.white],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
+// 风格诊断卡片
+class _StyleCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final styleResult = context.watch<AppState>().styleResult;
+
+    return AppGradientCard(
+      colors: const [Color(0xFFF0E6D6), Colors.white],
       child: Row(
         children: [
           Container(
@@ -132,93 +107,66 @@ class ProfilePage extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusS),
             ),
-            child: const Icon(
-              Icons.auto_awesome,
-              color: Color(0xFFC9B99A),
-              size: 24,
-            ),
+            child: const Icon(Icons.auto_awesome,
+                color: AppTheme.accent, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '\u98ce\u683c\u8bca\u65ad',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Text(
+                  styleResult != null ? '你的风格：$styleResult' : '风格诊断',
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '\u5b8c\u6210\u98ce\u683c\u6d4b\u8bd5\uff0c\u89e3\u9501\u4f60\u7684\u4e13\u5c5e\u7a7f\u642d\u65b9\u6848',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  styleResult != null ? '查看详细分析报告' : '完成风格测试，解锁你的专属穿搭方案',
+                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 12),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () => context.go('/style'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.black,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               elevation: 0,
             ),
-            child: const Text(
-              '\u53bb\u6d4b\u8bd5',
-              style: TextStyle(fontSize: 13),
-            ),
+            child: Text(styleResult != null ? '查看' : '去测试',
+                style: const TextStyle(fontSize: 13)),
           ),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 400.ms, delay: 100.ms);
   }
+}
 
-  Widget _buildMenuList() {
-    return Column(
-      children: [
-        _MenuItem(
-          icon: Icons.camera_alt,
-          label: '\u62cd\u7167\u5723\u5730',
-          onTap: (context) => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CapturePage()),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _MenuItem(
-          icon: Icons.favorite,
-          label: '\u5065\u5eb7\u77e5\u8bc6',
-          onTap: (context) => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const WellnessPage()),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _MenuItem(
-          icon: Icons.shopping_bag,
-          label: '\u6211\u7684\u8ba2\u5355',
-          onTap: (context) {},
-        ),
-        const SizedBox(height: 12),
-        _MenuItem(
-          icon: Icons.star,
-          label: '\u6211\u7684\u6536\u85cf',
-          onTap: (context) {},
-        ),
-      ],
-    );
+// 数据统计行
+class _StatRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: const [
+          _StatItem(count: '12', label: '收藏'),
+          _StatItem(count: '5', label: '关注'),
+          _StatItem(count: '8', label: '获赞'),
+        ],
+      ),
+    ).animate().fadeIn(duration: 400.ms, delay: 200.ms);
   }
 }
 
@@ -232,22 +180,50 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          count,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        Text(count,
+            style: const TextStyle(
+                fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF999999),
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: AppTheme.textHint)),
       ],
+    );
+  }
+}
+
+// 菜单列表
+class _MenuList extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (icon: Icons.camera_alt_outlined, label: '拍照圣地', route: '/capture'),
+      (icon: Icons.favorite_outline, label: '健康知识', route: '/wellness'),
+      (icon: Icons.receipt_outlined, label: '我的订单', route: ''),
+      (icon: Icons.star_outline, label: '我的收藏', route: ''),
+    ];
+
+    return Column(
+      children: items.asMap().entries.map((entry) {
+        final i = entry.key;
+        final item = entry.value;
+        return Column(
+          children: [
+            _MenuItem(
+              icon: item.icon as IconData,
+              label: item.label as String,
+              onTap: item.route != ''
+                  ? () => context.go(item.route as String)
+                  : () {},
+            ),
+            if (i < items.length - 1) const SizedBox(height: 12),
+          ],
+        ).animate().fadeIn(duration: 300.ms, delay: (300 + i * 80).ms).slideX(
+              begin: 0.05,
+              end: 0,
+              duration: 300.ms,
+              curve: Curves.easeOut,
+            );
+      }).toList(),
     );
   }
 }
@@ -255,7 +231,7 @@ class _StatItem extends StatelessWidget {
 class _MenuItem extends StatelessWidget {
   final IconData icon;
   final String label;
-  final void Function(BuildContext) onTap;
+  final VoidCallback onTap;
 
   const _MenuItem({
     required this.icon,
@@ -268,46 +244,28 @@ class _MenuItem extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => onTap(context),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x0A000000),
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusM),
+        child: AppCard(
+          onTap: onTap,
           child: Row(
             children: [
               Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF0E6D6),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppTheme.bgGradientStart.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusS),
                 ),
-                child: Icon(icon, color: const Color(0xFFC9B99A), size: 20),
+                child: Icon(icon, color: AppTheme.accent, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                child: Text(label,
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w500)),
               ),
-              const Icon(
-                Icons.chevron_right,
-                color: Color(0xFFCCCCCC),
-              ),
+              const Icon(Icons.chevron_right, color: AppTheme.textMute),
             ],
           ),
         ),

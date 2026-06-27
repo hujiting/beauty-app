@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import '../data.dart' show articles, softPink, softGold, pink, gold, pinkDark, Article;
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
+
+import '../theme/app_theme.dart';
+import '../widgets/common.dart';
 
 class WellnessPage extends StatelessWidget {
   const WellnessPage({super.key});
@@ -7,268 +11,189 @@ class WellnessPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: AppTheme.bgWhite,
+      appBar: AppBar(
+        title: const Text('健康知识'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: AppTheme.textPrimary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/'),
+        ),
+      ),
       body: SafeArea(
+        child: ListView.separated(
+          padding: const EdgeInsets.all(20),
+          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          itemCount: _articles.length + 1,
+          itemBuilder: (context, i) {
+            if (i == 0) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('健康美丽，从内而外',
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary)),
+                  const SizedBox(height: 4),
+                  const Text('科学护肤，健康生活',
+                      style: TextStyle(
+                          fontSize: 14, color: AppTheme.textHint)),
+                  const SizedBox(height: 20),
+                ],
+              ).animate().fadeIn(duration: 400.ms);
+            }
+            return _ArticleCard(article: _articles[i - 1], index: i - 1);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ArticleCard extends StatelessWidget {
+  final _Article article;
+  final int index;
+
+  const _ArticleCard({required this.article, required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {},
+      child: AppCard(
+        padding: const EdgeInsets.all(0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
-            _buildHeader(context),
-            const SizedBox(height: 16),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildAffirmationCard(),
-                    const SizedBox(height: 20),
-                    _buildCategoryPills(),
-                    const SizedBox(height: 20),
-                    _buildArticleList(),
-                    const SizedBox(height: 24),
-                  ],
+            // 顶部色块（替代图片）
+            Container(
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: article.colors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(AppTheme.radiusM)),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                article.emoji,
+                style: const TextStyle(fontSize: 48),
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(article.title,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 6),
+                  Text(article.summary,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                          height: 1.5),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Text(article.tag,
+                          style: const TextStyle(
+                              fontSize: 11, color: AppTheme.primary)),
+                      const Spacer(),
+                      const Icon(Icons.favorite_border,
+                          size: 16, color: AppTheme.textMute),
+                      const SizedBox(width: 4),
+                      Text('${article.likes}',
+                          style: const TextStyle(
+                              fontSize: 11, color: AppTheme.textMute)),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, size: 24),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const SizedBox(width: 4),
-          const Text(
-            '\u5065\u5eb7 & \u81ea\u6211\u5173\u7231',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAffirmationCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          begin: Alignment(-0.5, -0.5),
-          end: Alignment(0.5, 0.5),
-          colors: [Color(0xFFE8D5D5), Color(0xFFF0E6D6)],
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.3),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.favorite,
-              color: Colors.white,
-              size: 22,
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            '\u6bcf\u4e00\u79cd\u8eab\u6750\u90fd\u503c\u5f97\u88ab\u7231\uff0c\u6bcf\u4e00\u5f20\u8138\u90fd\u6709\u72ec\u7279\u7684\u7f8e\u3002',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '\u60a6\u5df1\u5ba3\u8a00',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryPills() {
-    const categories = ['\u5168\u90e8', '\u5fc3\u7406', '\u62a4\u80a4', '\u8425\u517b', '\u8fd0\u52a8', '\u517b\u751f'];
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: List.generate(categories.length, (index) {
-          final isActive = index == 0;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: isActive ? Colors.black : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: isActive
-                    ? null
-                    : const [
-                        BoxShadow(
-                          color: Color(0x0A000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-              ),
-              child: Text(
-                categories[index],
-                style: TextStyle(
-                  color: isActive ? Colors.white : const Color(0xFF666666),
-                  fontSize: 13,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  Widget _buildArticleList() {
-    return Column(
-      children: List.generate(
-        articles.length,
-        (index) {
-          final article = articles[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildArticleCard(article, index),
-          );
-        },
-      ),
-    );
-  }
-
-  static const List<List<Color>> _articleGradients = [
-    [Color(0xFFD4A5A5), Color(0xFFE8D5D5)],
-    [Color(0xFFC9B99A), Color(0xFFF0E6D6)],
-    [Color(0xFFE8D5D5), Color(0xFFD4A5A5)],
-    [Color(0xFFB88A8A), Color(0xFFD4A5A5)],
-    [Color(0xFFF0E6D6), Color(0xFFC9B99A)],
-    [Color(0xFFD4A5A5), Color(0xFFB88A8A)],
-  ];
-
-  Widget _buildArticleCard(Article article, int index) {
-    final colors = _articleGradients[index % _articleGradients.length];
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 110,
-            height: 90,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              gradient: LinearGradient(
-                colors: colors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: const Icon(
-              Icons.menu_book,
-              color: Colors.white,
-              size: 32,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  article.title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0E6D6),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    article.category,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF8B7355),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.visibility,
-                      size: 14,
-                      color: Color(0xFFBBBBBB),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      article.reads,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFBBBBBB),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    ).animate().fadeIn(duration: 400.ms, delay: (index * 80).ms).slideY(
+          begin: 0.1,
+          end: 0,
+          duration: 400.ms,
+          curve: Curves.easeOut,
+        );
   }
 }
+
+class _Article {
+  final String title;
+  final String summary;
+  final String emoji;
+  final List<Color> colors;
+  final String tag;
+  final int likes;
+
+  const _Article({
+    required this.title,
+    required this.summary,
+    required this.emoji,
+    required this.colors,
+    required this.tag,
+    required this.likes,
+  });
+}
+
+final _articles = [
+  _Article(
+    title: '早晚护肤步骤，你做对了吗？',
+    summary: '正确的护肤步骤能让护肤品发挥最大功效，避免浪费和皮肤负担。',
+    emoji: '🧴',
+    colors: [Color(0xFFE8D5D5), Color(0xFFD4A5A5)],
+
+    likes: 128,
+  ),
+  _Article(
+    title: '多喝水真的能改善肤质吗？',
+    summary: '科学研究表明，充足的水分摄入对皮肤健康有积极影响。',
+    emoji: '💧',
+    colors: [Color(0xFFF0E6D6), Color(0xFFC9B99A)],
+    tag: '健康饮食',
+    likes: 96,
+  ),
+  _Article(
+    title: '每天5分钟，改善面部循环',
+    summary: '简单的面部按摩手法，促进面部血液循环，提升皮肤光泽。',
+    emoji: '✨',
+    colors: [Color(0xFFD4A5A5), Color(0xFFB88A8A)],
+
+    likes: 156,
+  ),
+  _Article(
+    title: '防晒是最便宜的抗老方式',
+    summary: '紫外线是皮肤老化的最大元凶，科学防晒从今天开始。',
+    emoji: '☀️',
+    colors: [Color(0xFFC9B99A), Color(0xFFB88A8A)],
+
+    likes: 203,
+  ),
+  _Article(
+    title: '睡不够8小时，皮肤会怎样？',
+    summary: '睡眠不足会影响皮肤修复，导致暗沉、细纹等问题。',
+    emoji: '🌙',
+    colors: [Color(0xFFE8D5D5), Color(0xFFF0E6D6)],
+
+    likes: 87,
+  ),
+];

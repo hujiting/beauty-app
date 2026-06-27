@@ -1,32 +1,121 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import '../data.dart' show photoSpots, templates, pink, gold, softGold, softPink, pinkDark, PhotoSpot, Template;
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
-class CapturePage extends StatelessWidget {
+import '../theme/app_theme.dart';
+import '../widgets/common.dart';
+import '../providers/app_state.dart';
+
+class CapturePage extends StatefulWidget {
   const CapturePage({super.key});
+
+  @override
+  State<CapturePage> createState() => _CapturePageState();
+}
+
+class _CapturePageState extends State<CapturePage> {
+  final _picker = ImagePicker();
+  List<File> _capturedImages = [];
+  bool _isCaptureing = false;
+
+  Future<void> _pickFromCamera() async {
+    setState(() => _isCaptureing = true);
+    try {
+      final img = await _picker.pickImage(source: ImageSource.camera);
+      if (img != null) {
+        setState(() => _capturedImages.insert(0, File(img.path)));
+        await context.read<AppState>().addCapture(img.path);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('无法打开相机：$e')));
+      }
+    }
+    setState(() => _isCaptureing = false);
+  }
+
+  Future<void> _pickFromGallery() async {
+    try {
+      final imgs = await _picker.pickMultiImage();
+      if (imgs.isNotEmpty) {
+        for (final img in imgs) {
+          setState(() => _capturedImages.insert(0, File(img.path)));
+          await context.read<AppState>().addCapture(img.path);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('无法打开相册：$e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: AppTheme.bgWhite,
+      appBar: AppBar(
+        title: const Text('拍照圣地'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: AppTheme.textPrimary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/'),
+        ),
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 8),
-            _buildHeader(context),
-            const SizedBox(height: 20),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildPhotoSpotsSection(),
-                    const SizedBox(height: 24),
-                    _buildTemplatesSection(),
-                    const SizedBox(height: 24),
-                  ],
-                ),
+            // 拍照按钮区
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  // 拍照
+                  Expanded(
+                    child: _CaptureButton(
+                      icon: Icons.camera_alt,
+                      label: '拍照',
+                      onTap: _pickFromCamera,
+                      loading: _isCaptureing,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // 相册
+                  Expanded(
+                    child: _CaptureButton(
+                      icon: Icons.photo_library_outlined,
+                      label: '相册',
+                      onTap: _pickFromGallery,
+                    ),
+                  ),
+                ],
               ),
+            ),
+
+            // 提示语
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                '拍照或上传照片，AI 将为你分析最适合的妆容风格',
+                style: TextStyle(fontSize: 13, color: AppTheme.textHint),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // 照片网格
+            Expanded(
+              child: _capturedImages.isEmpty
+                  ? _buildEmptyState()
+                  : _buildPhotoGrid(),
             ),
           ],
         ),
@@ -34,275 +123,154 @@ class CapturePage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, size: 24),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const SizedBox(width: 4),
-          const Text(
-            '\u62cd\u7167 & \u51fa\u7247',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPhotoSpotsSection() {
+  Widget _buildEmptyState() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-          '\u57ce\u5e02\u62cd\u7167\u5723\u5730',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 220,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: photoSpots.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final spot = photoSpots[index];
-              return _buildPhotoSpotCard(spot, index);
-            },
-          ),
-        ),
+        Icon(
+          Icons.camera_alt_outlined,
+          size: 64,
+          color: AppTheme.textMute.withOpacity(0.5),
+        ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(
+              duration: 2000.ms,
+              begin: const Offset(0.95, 0.95),
+              end: const Offset(1.05, 1.05),
+            ),
+        const SizedBox(height: 16),
+        const Text('还没有照片',
+            style: TextStyle(fontSize: 16, color: AppTheme.textHint)),
+        const SizedBox(height: 4),
+        const Text('点击上方按钮开始拍照',
+            style: TextStyle(fontSize: 13, color: AppTheme.textMute)),
       ],
     );
   }
 
-  static const List<List<Color>> _spotGradients = [
-    [Color(0xFFD4A5A5), Color(0xFFB88A8A)],
-    [Color(0xFFC9B99A), Color(0xFFA89A7E)],
-    [Color(0xFFE8D5D5), Color(0xFFD4A5A5)],
-    [Color(0xFFB88A8A), Color(0xFFC9B99A)],
-  ];
-
-  Widget _buildPhotoSpotCard(PhotoSpot spot, int index) {
-    final colors = _spotGradients[index % _spotGradients.length];
-    return Container(
-      width: 160,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
+  Widget _buildPhotoGrid() {
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 1,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 120,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: colors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+      itemCount: _capturedImages.length,
+      itemBuilder: (context, i) {
+        final file = _capturedImages[i];
+        return GestureDetector(
+          onTap: () => _showImagePreview(file),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppTheme.radiusS),
+            child: Image.file(file, fit: BoxFit.cover),
+          ).animate().fadeIn(
+                duration: 300.ms,
+                delay: (i * 50).ms,
               ),
-            ),
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  spot.city,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  spot.location,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0E6D6),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                spot.style,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF8B7355),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildTemplatesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '\u51fa\u7247\u6a21\u677f',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.85,
-          ),
-          itemCount: templates.length,
-          itemBuilder: (context, index) {
-            final template = templates[index];
-            return _buildTemplateCard(template, index);
-          },
-        ),
-      ],
-    );
-  }
-
-  static const List<List<Color>> _templateGradients = [
-    [Color(0xFFE8D5D5), Color(0xFFD4A5A5)],
-    [Color(0xFFD4A5A5), Color(0xFFC9B99A)],
-    [Color(0xFFC9B99A), Color(0xFFB88A8A)],
-    [Color(0xFFB88A8A), Color(0xFFE8D5D5)],
-  ];
-
-  Widget _buildTemplateCard(Template template, int index) {
-    final colors = _templateGradients[index % _templateGradients.length];
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 130,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: colors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+  void _showImagePreview(File file) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppTheme.radiusM),
+              child: Image.file(file, fit: BoxFit.contain),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
               ),
             ),
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 12,
-                  top: 12,
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.play_arrow,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+            Positioned(
+              bottom: 16,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.go('/makeup');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                 ),
-                Positioned(
-                  right: 12,
-                  bottom: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${template.count}\u6b21\u4f7f\u7528',
+                child: const Text('用此照片分析妆容'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 拍照/相册按钮
+class _CaptureButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool loading;
+
+  const _CaptureButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.loading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: loading ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppTheme.primary, AppTheme.accent],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(AppTheme.radiusL),
+          boxShadow: AppTheme.cardShadow,
+        ),
+        child: loading
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              )
+            : Column(
+                children: [
+                  Icon(icon, size: 32, color: Colors.white),
+                  const SizedBox(height: 8),
+                  Text(label,
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white)),
+                ],
+              ),
+      ).animate().fadeIn(duration: 400.ms).scale(
+            begin: const Offset(0.95, 0.95),
+            end: const Offset(1.0, 1.0),
+            duration: 300.ms,
+            curve: Curves.easeOut,
           ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  template.name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  template.platform,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF999999),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

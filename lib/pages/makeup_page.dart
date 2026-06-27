@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../data.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
-// ---------------------------------------------------------------------------
-// MakeupPage — AI 脸型分析 (Entry view + Result view)
-// ---------------------------------------------------------------------------
+import '../theme/app_theme.dart';
+import '../widgets/common.dart';
+import '../providers/app_state.dart';
 
 class MakeupPage extends StatefulWidget {
   const MakeupPage({super.key});
@@ -14,762 +16,344 @@ class MakeupPage extends StatefulWidget {
 }
 
 class _MakeupPageState extends State<MakeupPage> {
-  bool _showResult = false;
+  bool _isAnalyzing = false;
   double _progress = 0;
-  bool _analyzing = false;
+  String? _result;
+  Timer? _timer;
 
-  // ---------------------------------------------------------------------------
-  // Analysis Timer
-  // ---------------------------------------------------------------------------
+  final _analysisSteps = [
+    '正在检测肤质...',
+    '分析面部特征...',
+    '匹配妆容风格...',
+    '生成个性化方案...',
+    '分析完成！',
+  ];
+
+  String get _currentStep {
+    final idx = (_progress * _analysisSteps.length).floor().clamp(0, _analysisSteps.length - 1);
+    return _analysisSteps[idx];
+  }
 
   void _startAnalysis() {
     setState(() {
-      _analyzing = true;
+      _isAnalyzing = true;
       _progress = 0;
+      _result = null;
     });
 
-    Timer.periodic(const Duration(milliseconds: 30), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      setState(() {
-        _progress += 1;
-      });
-      if (_progress >= 100) {
-        timer.cancel();
+    // 模拟分析进度
+    _timer = Timer.periodic(const Duration(milliseconds: 80), (t) {
+      setState(() => _progress += 0.01);
+      if (_progress >= 1.0) {
+        t.cancel();
         setState(() {
-          _analyzing = false;
-          _showResult = true;
+          _isAnalyzing = false;
+          _result = '清新自然妆';
         });
       }
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAF8),
+      backgroundColor: AppTheme.bgWhite,
+      appBar: AppBar(
+        title: const Text('智能上妆'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: AppTheme.textPrimary,
+      ),
       body: SafeArea(
-        child: _showResult ? _buildResultView() : _buildEntryView(),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: _result != null
+              ? _buildResult(context)
+              : _isAnalyzing
+                  ? _buildAnalyzing()
+                  : _buildLanding(context),
+        ),
       ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // ENTRY VIEW
-  // ---------------------------------------------------------------------------
+  // 初始页面
+  Widget _buildLanding(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // 主图标
+        Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppTheme.primary, AppTheme.accent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(60),
+          ),
+          child: const Icon(Icons.brush, size: 56, color: Colors.white),
+        ).animate().scale(
+              duration: 600.ms,
+              curve: Curves.elasticOut,
+            ),
 
-  Widget _buildEntryView() {
-    return CustomScrollView(
-      slivers: [
-        // ---- App Bar ----
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Text(
-              'AI 妆容',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF1A1A1A),
+        const SizedBox(height: 32),
+
+        const Text('AI 智能上妆',
+            style: TextStyle(
+                fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+
+        const SizedBox(height: 8),
+
+        const Text('上传照片，获取个性化妆容建议',
+            style: TextStyle(fontSize: 14, color: AppTheme.textHint)),
+
+        const SizedBox(height: 48),
+
+        // 上传照片按钮
+        ElevatedButton.icon(
+          onPressed: _startAnalysis,
+          icon: const Icon(Icons.add_a_photo, size: 20),
+          label: const Text('上传照片'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            ),
+            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ).animate().fadeIn(duration: 400.ms, delay: 300.ms),
+
+        const SizedBox(height: 16),
+
+        // 拍照按钮
+        OutlinedButton.icon(
+          onPressed: () => context.go('/capture'),
+          icon: const Icon(Icons.camera_alt_outlined, size: 20),
+          label: const Text('去拍照'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppTheme.textPrimary,
+            minimumSize: const Size(double.infinity, 52),
+            side: const BorderSide(color: AppTheme.borderLight),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            ),
+            textStyle: const TextStyle(fontSize: 16),
+          ),
+        ).animate().fadeIn(duration: 400.ms, delay: 400.ms),
+      ],
+    );
+  }
+
+  // 分析中页面
+  Widget _buildAnalyzing() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // 进度环
+        SizedBox(
+          width: 160,
+          height: 160,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 160,
+                height: 160,
+                child: CircularProgressIndicator(
+                  value: _progress,
+                  strokeWidth: 6,
+                  backgroundColor: AppTheme.primary.withOpacity(0.1),
+                  valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
+                ),
               ),
-            ),
+              Text('${(_progress * 100).toInt()}%',
+                  style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary)),
+            ],
           ),
-        ),
+        ).animate().scale(duration: 300.ms, curve: Curves.easeOut),
 
-        SliverPadding(
-          padding: const EdgeInsets.all(16),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              // ---- Top Analysis Card ----
-              _buildAnalysisCard(),
-              const SizedBox(height: 24),
+        const SizedBox(height: 32),
 
-              // ---- 妆容教程 Section Header ----
-              _buildSectionHeader('妆容教程'),
-              const SizedBox(height: 12),
-            ]),
-          ),
-        ),
+        Text(_currentStep,
+            style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textPrimary)),
 
-        // ---- Tutorials Horizontal List ----
-        SliverToBoxAdapter(
-          child: SizedBox(
-            height: 200,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: tutorials.length,
-              itemBuilder: (context, index) =>
-                  _buildTutorialCard(tutorials[index]),
-            ),
-          ),
-        ),
+        const SizedBox(height: 8),
 
-        SliverPadding(
-          padding: const EdgeInsets.all(16),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              const SizedBox(height: 12),
-              // ---- 推荐博主 Section Header ----
-              _buildSectionHeader('推荐博主'),
-              const SizedBox(height: 12),
-              // ---- Bloggers Vertical List ----
-              ...bloggers.map((b) => _buildBloggerItem(b)),
-            ]),
-          ),
+        const Text('AI 正在为你分析最适合的妆容',
+            style: TextStyle(fontSize: 13, color: AppTheme.textHint)),
+
+        const SizedBox(height: 48),
+
+        // 分析步骤指示器
+        Column(
+          children: _analysisSteps.asMap().entries.map((entry) {
+            final i = entry.key;
+            final step = entry.value;
+            final done = _progress > (i + 1) / _analysisSteps.length;
+            final current = _progress >= i / _analysisSteps.length &&
+                _progress < (i + 1) / _analysisSteps.length;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    done ? Icons.check_circle : Icons.circle,
+                    size: 18,
+                    color: done
+                        ? Colors.green
+                        : current
+                            ? AppTheme.primary
+                            : AppTheme.textMute,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(step,
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: done
+                              ? AppTheme.textSecondary
+                              : current
+                                  ? AppTheme.textPrimary
+                                  : AppTheme.textMute)),
+                ],
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Analysis Card (gradient #E8D5D5 → white)
-  // ---------------------------------------------------------------------------
+  // 结果页面
+  Widget _buildResult(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            color: Colors.green.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.check_circle, size: 40, color: Colors.green),
+        ).animate().scale(duration: 500.ms, curve: Curves.elasticOut),
 
-  Widget _buildAnalysisCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFE8D5D5), Colors.white],
+        const SizedBox(height: 24),
+
+        Text('推荐妆容：$_result',
+            style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary)),
+
+        const SizedBox(height: 8),
+
+        const Text('根据你的面部特征，为你推荐以下妆容方案',
+            style: TextStyle(fontSize: 14, color: AppTheme.textHint)),
+
+        const SizedBox(height: 32),
+
+        // 方案卡片
+        AppCard(
+          child: Column(
+            children: [
+              Container(
+                height: 120,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.primary, AppTheme.accent],
+                  ),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusM),
+                ),
+                alignment: Alignment.center,
+                child: const Text('💄', style: TextStyle(fontSize: 48)),
+              ),
+              const SizedBox(height: 16),
+              const Text('清新自然妆',
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text('适合日常通勤，突出自然好气色',
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: const [
+                  _TipItem(label: '底妆', tip: '轻薄透气'),
+                  _TipItem(label: '眼妆', tip: '大地色系'),
+                  _TipItem(label: '唇妆', tip: '豆沙色'),
+                ],
+              ),
+            ],
+          ),
+        ).animate().fadeIn(duration: 400.ms).slideY(
+              begin: 0.2,
+              end: 0,
+              duration: 400.ms,
+              curve: Curves.easeOut,
+            ),
+
+        const SizedBox(height: 32),
+
+        ElevatedButton(
+          onPressed: () {
+            context.read<AppState>().saveStyleResult(_result!);
+            setState(() {
+              _result = null;
+              _progress = 0;
+            });
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            ),
+          ),
+          child: const Text('保存方案'),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Sparkles icon in circle
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: softPink,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.auto_awesome, color: pink, size: 28),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'AI 脸型分析',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A1A),
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            '上传一张照片，AI 将为你分析脸型并推荐最适合的妆容方案',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: Color(0xFF999999),
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Buttons or progress bar
-          if (_analyzing && !_showResult) ...[
-            _buildProgressBar(),
-          ] else ...[
-            Row(
-              children: [
-                Expanded(
-                  child: _buildAnalysisButton(
-                    icon: Icons.camera_alt,
-                    label: '拍照分析',
-                    filled: true,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildAnalysisButton(
-                    icon: Icons.upload,
-                    label: '上传照片',
-                    filled: false,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
+      ],
     );
   }
+}
 
-  // ---------------------------------------------------------------------------
-  // Progress Bar
-  // ---------------------------------------------------------------------------
+class _TipItem extends StatelessWidget {
+  final String label;
+  final String tip;
 
-  Widget _buildProgressBar() {
+  const _TipItem({required this.label, required this.tip});
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: _progress / 100,
-            backgroundColor: Colors.grey[200],
-            valueColor: AlwaysStoppedAnimation<Color>(pink),
-            minHeight: 8,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          '正在分析中… ${_progress.toInt()}%',
-          style: TextStyle(fontSize: 13, color: pink),
-        ),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 12, color: AppTheme.textHint)),
+        const SizedBox(height: 2),
+        Text(tip,
+            style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600)),
       ],
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Analysis Buttons
-  // ---------------------------------------------------------------------------
-
-  Widget _buildAnalysisButton({
-    required IconData icon,
-    required String label,
-    required bool filled,
-  }) {
-    return GestureDetector(
-      onTap: _startAnalysis,
-      child: Container(
-        height: 46,
-        decoration: BoxDecoration(
-          color: filled ? pink : Colors.white,
-          borderRadius: BorderRadius.circular(23),
-          border: filled ? null : Border.all(color: pink, width: 1.5),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: filled ? Colors.white : pink),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: filled ? Colors.white : pink,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 妆容教程 — Tutorial Card
-  // ---------------------------------------------------------------------------
-
-  Widget _buildTutorialCard(Tutorial tutorial) {
-    return Container(
-      width: 160,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Gradient top (110h) with play icon
-          Container(
-            height: 110,
-            decoration: BoxDecoration(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [pink, gold],
-              ),
-            ),
-            child: Center(
-              child: Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.play_arrow,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ),
-            ),
-          ),
-
-          // Title + level + minutes
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tutorial.title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: softGold,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        tutorial.level,
-                        style: TextStyle(fontSize: 10, color: pinkDark),
-                      ),
-                    ),
-                    const Spacer(),
-                    const Icon(
-                      Icons.schedule,
-                      size: 12,
-                      color: Color(0xFF999999),
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      tutorial.duration,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF999999),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 推荐博主 — Blogger Item
-  // ---------------------------------------------------------------------------
-
-  Widget _buildBloggerItem(Blogger blogger) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Avatar circle (44, gradient)
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [pink, gold],
-              ),
-            ),
-            child: Center(
-              child: Text(
-                blogger.name.substring(0, 1),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Name + fans + tag
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  blogger.name,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.people_outline,
-                      size: 13,
-                      color: Color(0xFF999999),
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${blogger.fans}粉丝',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF999999),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: softPink,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        blogger.style,
-                        style: TextStyle(fontSize: 10, color: pinkDark),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // 关注 button
-          GestureDetector(
-            onTap: () {},
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-              decoration: BoxDecoration(
-                color: pink,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Text(
-                '关注',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Section Header
-  // ---------------------------------------------------------------------------
-
-  Widget _buildSectionHeader(String title) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A1A),
-          ),
-        ),
-        const Icon(
-          Icons.chevron_right,
-          color: Color(0xFF999999),
-          size: 20,
-        ),
-      ],
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // RESULT VIEW
-  // ---------------------------------------------------------------------------
-
-  Widget _buildResultView() {
-    return CustomScrollView(
-      slivers: [
-        // ---- Back arrow ----
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A1A)),
-              onPressed: () {
-                setState(() {
-                  _showResult = false;
-                  _analyzing = false;
-                  _progress = 0;
-                });
-              },
-            ),
-          ),
-        ),
-
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              // ---- Face Type Card ----
-              _buildFaceTypeCard(),
-              const SizedBox(height: 24),
-
-              // ---- 推荐妆容 Section ----
-              _buildSectionHeader('推荐妆容'),
-              const SizedBox(height: 12),
-              ...List.generate(faceMakeupRecs.length, (i) {
-                return _buildMakeupRecCard(i + 1, faceMakeupRecs[i]);
-              }),
-              const SizedBox(height: 24),
-
-              // ---- 变美小贴士 Section ----
-              _buildSectionHeader('变美小贴士'),
-              const SizedBox(height: 12),
-              ...faceTips.map((tip) => _buildTipItem(tip)),
-              const SizedBox(height: 24),
-            ]),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Face Type Card
-  // ---------------------------------------------------------------------------
-
-  Widget _buildFaceTypeCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [pink, gold],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: pink.withOpacity(0.2),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // 🥚 emoji in circle
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.25),
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Text('🥚', style: TextStyle(fontSize: 32)),
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            '鹅蛋脸',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '脸型比例匀称，线条流畅',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.white.withOpacity(0.85),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Feature chips from faceFeatures
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: faceFeatures
-                .map(
-                  (feature) => Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      feature,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 推荐妆容 — Numbered Card
-  // ---------------------------------------------------------------------------
-
-  Widget _buildMakeupRecCard(int index, FaceMakeup rec) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Number circle
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [pink, gold],
-              ),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '$index',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  rec.title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  rec.advice,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF666666),
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 变美小贴士 — Tip Item
-  // ---------------------------------------------------------------------------
-
-  Widget _buildTipItem(String tip) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.check_circle, color: pink, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              tip,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF333333),
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

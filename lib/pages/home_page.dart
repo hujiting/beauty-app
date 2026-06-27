@@ -1,522 +1,386 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
+
+import '../theme/app_theme.dart';
+import '../widgets/common.dart';
 import '../data.dart';
+import 'makeup_page.dart';
 import 'capture_page.dart';
-import 'wellness_page.dart';
+import 'style_page.dart';
 
-// ---------------------------------------------------------------------------
-// Helper Widgets
-// ---------------------------------------------------------------------------
-
-class _GradientBox extends StatelessWidget {
-  final Color color1;
-  final Color color2;
-  final Widget? child;
-  final double borderRadius;
-  final AlignmentGeometry begin;
-  final AlignmentGeometry end;
-
-  const _GradientBox({
-    required this.color1,
-    required this.color2,
-    this.child,
-    this.borderRadius = 16,
-    this.begin = Alignment.topLeft,
-    this.end = Alignment.bottomRight,
-  });
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        gradient: LinearGradient(
-          begin: begin,
-          end: end,
-          colors: [color1, color2],
-        ),
-      ),
-      child: child,
-    );
-  }
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _Card extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? padding;
-  final EdgeInsetsGeometry? margin;
-
-  const _Card({
-    required this.child,
-    this.padding,
-    this.margin,
-  });
+class _HomePageState extends State<HomePage> {
+  final _scrollController = ScrollController();
+  bool _showTitle = false;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: margin ?? const EdgeInsets.only(bottom: 16),
-      padding: padding ?? const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: child,
-    );
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      final show = _scrollController.offset > 80;
+      if (show != _showTitle) setState(() => _showTitle = show);
+    });
   }
-}
 
-// ---------------------------------------------------------------------------
-// HomePage
-// ---------------------------------------------------------------------------
-
-class HomePage extends StatelessWidget {
-  final void Function(int)? onTabChange;
-  const HomePage({super.key, this.onTabChange});
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAF8),
+      backgroundColor: AppTheme.bgWhite,
       body: SafeArea(
         child: CustomScrollView(
+          controller: _scrollController,
           slivers: [
-            // ---- App Bar with Search ----
-            SliverToBoxAdapter(child: _buildSearchBar(context)),
+            SliverAppBar(
+              floating: true,
+              snap: true,
+              backgroundColor: Colors.white,
+              elevation: _showTitle ? 1 : 0,
+              title: _showTitle
+                  ? const Text('钥纪',
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary))
+                  : null,
+              centerTitle: true,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined,
+                      color: AppTheme.textPrimary),
+                  onPressed: () {},
+                ),
+              ],
+            ),
 
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  const SizedBox(height: 16),
-                  _buildInspirationCard(context),
-                  const SizedBox(height: 24),
-                  _buildQuickActions(context),
-                  const SizedBox(height: 24),
-                  _buildHotTopicsSection(),
-                  const SizedBox(height: 24),
-                  _buildSectionHeader('为你精选'),
-                  const SizedBox(height: 12),
-                ]),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('早上好 ☀️',
+                        style: TextStyle(
+                            fontSize: 14, color: AppTheme.textHint)),
+                    const SizedBox(height: 4),
+                    const Text('今天想尝试什么风格？',
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary)),
+                    const SizedBox(height: 20),
+                    _SearchBar(),
+                  ],
+                ),
               ),
             ),
 
-            // ---- Inspiration Feed ----
+            SliverToBoxAdapter(child: _FeatureGrid()),
+
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+                child: const SectionHeader(title: '今日推荐', subtitle: '为你精选'),
+              ),
+            ),
+
+            SliverToBoxAdapter(child: _RecommendList()),
+
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+                child: const SectionHeader(title: '探索风格'),
+              ),
+            ),
+
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.85,
+                ),
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildInspirationItem(
-                    context,
-                    inspirations[index],
-                  ),
-                  childCount: inspirations.length,
+                  (context, i) => _StyleCard(style: styles[i]),
+                  childCount: styles.length,
                 ),
               ),
             ),
 
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 24),
-            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
       ),
     );
   }
+}
 
-  // ---------------------------------------------------------------------------
-  // Search Bar
-  // ---------------------------------------------------------------------------
-
-  Widget _buildSearchBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F0),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 14),
-                  const Icon(
-                    Icons.search,
-                    color: Color(0xFF999999),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: '搜索妆容、穿搭、博主...',
-                        hintStyle: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF999999),
-                        ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Camera circle button (gradient pink→gold)
-          _GradientBox(
-            color1: pink,
-            color2: gold,
-            borderRadius: 22,
-            child: SizedBox(
-              width: 44,
-              height: 44,
-              child: Center(
-                child: Icon(
-                  Icons.camera_alt,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 今日变美灵感 Card
-  // ---------------------------------------------------------------------------
-
-  Widget _buildInspirationCard(BuildContext context) {
-    return _GradientBox(
-      color1: const Color(0xFF1A1A1A),
-      color2: const Color(0xFF2A2A2A),
+// 搜索栏
+class _SearchBar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.go('/shop'),
       child: Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F3),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        ),
+        child: const Row(
           children: [
-            // Section label with gold sun icon
-            Row(
-              children: [
-                Icon(
-                  Icons.wb_sunny,
-                  color: gold,
-                  size: 18,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '今日变美灵感',
-                  style: TextStyle(
-                    color: gold,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            // Quote text
-            const Text(
-              '真正的美不是模仿别人，而是找到最适合自己的样子。',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w500,
-                height: 1.6,
-                letterSpacing: 0.3,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Tag chips
-            Wrap(
-              spacing: 8,
-              children: [
-                _buildTagChip('#自我风格'),
-                _buildTagChip('#Beauty主义'),
-              ],
-            ),
+            Icon(Icons.search, size: 20, color: AppTheme.textHint),
+            SizedBox(width: 8),
+            Text('搜索风格、好物...',
+                style: TextStyle(fontSize: 14, color: AppTheme.textMute)),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildTagChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
+// 功能入口网格
+class _FeatureGrid extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final features = [
+      _FeatureItem(
+        icon: Icons.brush_outlined,
+        label: '智能上妆',
+        color: AppTheme.primary,
+        onTap: () => context.go('/makeup'),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: Colors.white.withOpacity(0.8),
-          fontSize: 12,
-        ),
+      _FeatureItem(
+        icon: Icons.camera_alt_outlined,
+        label: '拍照圣地',
+        color: AppTheme.accent,
+        onTap: () => context.go('/capture'),
       ),
-    );
-  }
+      _FeatureItem(
+        icon: Icons.auto_awesome_outlined,
+        label: '风格诊断',
+        color: const Color(0xFFB88A8A),
+        onTap: () => context.go('/style'),
+      ),
+      _FeatureItem(
+        icon: Icons.store_outlined,
+        label: '好物商城',
+        color: AppTheme.highlight,
+        onTap: () => context.go('/shop'),
+      ),
+    ];
 
-  // ---------------------------------------------------------------------------
-  // Quick Action Buttons
-  // ---------------------------------------------------------------------------
-
-  Widget _buildQuickActions(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildActionButton(
-          context,
-          icon: Icons.auto_awesome,
-          label: 'AI妆容分析',
-          onTap: () {
-            onTabChange?.call(1);
-          },
-        ),
-        _buildActionButton(
-          context,
-          icon: Icons.checkroom,
-          label: '风格测试',
-          onTap: () {
-            onTabChange?.call(2);
-          },
-        ),
-        _buildActionButton(
-          context,
-          icon: Icons.camera_alt,
-          label: '出片模板',
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const CapturePage()),
-            );
-          },
-        ),
-        _buildActionButton(
-          context,
-          icon: Icons.favorite,
-          label: '健康知识',
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const WellnessPage()),
-            );
-          },
-        ),
-      ],
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: features
+          .map((f) => f.animate().scale(
+                duration: 300.ms,
+                delay: (features.indexOf(f) * 80).ms,
+                curve: Curves.easeOut,
+              ))
+          .toList(),
     );
   }
+}
 
-  Widget _buildActionButton(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
+class _FeatureItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _FeatureItem({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F0),
-              borderRadius: BorderRadius.circular(16),
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(AppTheme.radiusM),
             ),
-            child: Icon(icon, size: 20, color: const Color(0xFF333333)),
+            child: Icon(icon, color: color, size: 26),
           ),
           const SizedBox(height: 6),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF666666)),
-          ),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 12, color: AppTheme.textSecondary)),
         ],
       ),
     );
   }
+}
 
-  // ---------------------------------------------------------------------------
-  // 热门话题 Horizontal Scroll
-  // ---------------------------------------------------------------------------
-
-  Widget _buildHotTopicsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('热门话题'),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 34,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _buildTopicTag('#秋季穿搭'),
-              _buildTopicTag('#淡妆教程'),
-              _buildTopicTag('#极简风'),
-              _buildTopicTag('#身材管理'),
-              _buildTopicTag('#拍照姿势'),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTopicTag(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: softPink,
-          borderRadius: BorderRadius.circular(17),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(fontSize: 13, color: pinkDark),
-        ),
+// 推荐商品横向列表
+class _RecommendList extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final recs = products.take(6).toList();
+    return SizedBox(
+      height: 200,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemCount: recs.length,
+        itemBuilder: (context, i) {
+          final p = recs[i];
+          final gradient = AppTheme.catGradients[p.category] ??
+              [AppTheme.primary, AppTheme.accent];
+          return GestureDetector(
+            onTap: () {},
+            child: Container(
+              width: 140,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(AppTheme.radiusM),
+                boxShadow: AppTheme.cardShadow,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 110,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: gradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(AppTheme.radiusM)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      p.name.substring(0, 1),
+                      style: const TextStyle(
+                          fontSize: 32, color: Colors.white70),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(p.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 4),
+                        Text('¥${p.price}',
+                            style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.highlight)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(duration: 300.ms, delay: (i * 60).ms),
+          );
+        },
       ),
     );
   }
+}
 
-  // ---------------------------------------------------------------------------
-  // Section Header Helper
-  // ---------------------------------------------------------------------------
+// 风格卡片
+class _StyleCard extends StatelessWidget {
+  final Style style;
+  const _StyleCard({required this.style});
 
-  Widget _buildSectionHeader(String title) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A1A),
-          ),
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.go('/style'),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.radiusM),
+          boxShadow: AppTheme.cardShadow,
         ),
-        const Icon(
-          Icons.chevron_right,
-          color: Color(0xFF999999),
-          size: 20,
-        ),
-      ],
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 为你精选 — Inspiration Item Card
-  // ---------------------------------------------------------------------------
-
-  Widget _buildInspirationItem(BuildContext context, Inspiration item) {
-    return _Card(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          // Left: gradient thumbnail with play icon
-          _GradientBox(
-            color1: pink,
-            color2: gold,
-            borderRadius: 12,
-            child: SizedBox(
-              width: 120,
-              height: 100,
-              child: Center(
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
-                    shape: BoxShape.circle,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppTheme.radiusM),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.primary.withOpacity(0.3),
+                      AppTheme.accent.withOpacity(0.3),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: const Icon(
-                    Icons.play_arrow,
-                    color: Colors.white,
-                    size: 24,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  style.name.substring(0, 1),
+                  style: const TextStyle(fontSize: 48, color: Colors.white70),
+                ),
+              ),
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.92),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusS),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(style.name,
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.bold)),
+                      Text('${style.count} 套搭配',
+                          style: const TextStyle(
+                              fontSize: 11, color: AppTheme.textHint)),
+                    ],
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 12),
-
-          // Right: title, tag, reads count
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: softPink,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    item.category,
-                    style: TextStyle(fontSize: 11, color: pinkDark),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.visibility_outlined,
-                      size: 14,
-                      color: Color(0xFF999999),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      item.views,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF999999),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+        ),
+      ).animate().fadeIn(duration: 400.ms).scale(
+            begin: const Offset(0.95, 0.95),
+            end: const Offset(1.0, 1.0),
+            duration: 300.ms,
+            curve: Curves.easeOut,
           ),
-        ],
-      ),
     );
-  }
-
-  String _formatCount(int count) {
-    if (count >= 10000) {
-      return '${(count / 10000).toStringAsFixed(1)}万';
-    } else if (count >= 1000) {
-      return '${(count / 1000).toStringAsFixed(1)}k';
-    }
-    return count.toString();
   }
 }
