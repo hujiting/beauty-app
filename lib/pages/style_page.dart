@@ -77,7 +77,7 @@ class _StylePageState extends State<StylePage> {
       _resultStyle = _styleMap[maxEntry.key] ?? '优雅知性风';
       _showResult = true;
     });
-    context.read<AppState>().saveStyleResult(_resultStyle);
+    context.read<AppState>().updateStyleResult(_resultStyle);
   }
 
   @override
@@ -124,7 +124,7 @@ class _StylePageState extends State<StylePage> {
         LinearProgressIndicator(
           value: (_currentQ + 1) / _questions.length,
           minHeight: 6,
-          backgroundColor: AppTheme.primary.withOpacity(0.1),
+          backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
           valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
         ).animate().fadeIn(duration: 300.ms),
 
@@ -175,9 +175,9 @@ class _StylePageState extends State<StylePage> {
                         height: 28,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: selected
-                              ? Colors.white.withOpacity(0.3)
-                              : AppTheme.primary.withOpacity(0.1),
+                              color: selected
+                                  ? Colors.white.withValues(alpha: 0.3)
+                                  : AppTheme.primary.withValues(alpha: 0.1),
                         ),
                         alignment: Alignment.center,
                         child: Text(

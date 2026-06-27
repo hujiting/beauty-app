@@ -26,6 +26,7 @@ class AppTheme {
   static const Color border = Color(0xFFF0F0F0);
   static const Color borderLight = Color(0xFFE8E8E4);
   static const Color shadow = Color(0x0A000000);
+  static const Color bgGray = Color(0xFFF5F5F3);
 
   // ============ Dark Mode 色板 ============
   static const Color darkBg = Color(0xFF1A1A1A);

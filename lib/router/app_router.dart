@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../theme/app_theme.dart';
 import '../pages/home_page.dart';
 import '../pages/shop_page.dart';
 import '../pages/makeup_page.dart';
 import '../pages/profile_page.dart';
-import '../pages/capture_page.dart';
+import '../pages/capture_page.dart'; // 出片圣地
 import '../pages/wellness_page.dart';
 import '../pages/style_page.dart';
+import '../pages/skin_analysis_page.dart';
+import '../pages/hair_analysis_page.dart';
+import '../pages/skincare_page.dart';
+import '../pages/outfit_page.dart';
+import '../pages/hairstyle_page.dart';
+import '../pages/blogger_page.dart';
+import '../pages/community_page.dart';
 
 /// APP 统一路由配置
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
-  debugLogDiagnostics: true,
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, child) {
@@ -40,6 +47,16 @@ final GoRouter appRouter = GoRouter(
             GoRoute(
               path: '/makeup',
               builder: (context, state) => const MakeupPage(),
+              routes: [
+                GoRoute(
+                  path: 'skin',
+                  builder: (context, state) => const SkinAnalysisPage(),
+                ),
+                GoRoute(
+                  path: 'hair',
+                  builder: (context, state) => const HairAnalysisPage(),
+                ),
+              ],
             ),
           ],
         ),
@@ -53,6 +70,7 @@ final GoRouter appRouter = GoRouter(
         ),
       ],
     ),
+    // 非 Tab 页面
     GoRoute(
       path: '/capture',
       builder: (context, state) => const CapturePage(),
@@ -64,6 +82,26 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/style',
       builder: (context, state) => const StylePage(),
+    ),
+    GoRoute(
+      path: '/skincare',
+      builder: (context, state) => const SkincarePage(),
+    ),
+    GoRoute(
+      path: '/outfit',
+      builder: (context, state) => const OutfitPage(),
+    ),
+    GoRoute(
+      path: '/hairstyle',
+      builder: (context, state) => const HairstylePage(),
+    ),
+    GoRoute(
+      path: '/bloggers',
+      builder: (context, state) => const BloggerPage(),
+    ),
+    GoRoute(
+      path: '/community',
+      builder: (context, state) => const CommunityPage(),
     ),
   ],
 );
@@ -81,7 +119,7 @@ class _MainShell extends StatelessWidget {
   }
 
   static const _tabIcons = [
-    (icon: Icons.home_outlined, activeIcon: Icons.home, label: '首页'),
+    (icon: Icons.auto_awesome_outlined, activeIcon: Icons.auto_awesome, label: '管家'),
     (icon: Icons.store_outlined, activeIcon: Icons.store, label: '商城'),
     (icon: Icons.brush_outlined, activeIcon: Icons.brush, label: '妆容'),
     (icon: Icons.person_outline, activeIcon: Icons.person, label: '我的'),
@@ -97,7 +135,7 @@ class _MainShell extends StatelessWidget {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -112,8 +150,8 @@ class _MainShell extends StatelessWidget {
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.transparent,
           elevation: 0,
-          selectedItemColor: const Color(0xFFD4A5A5),
-          unselectedItemColor: const Color(0xFF999999),
+          selectedItemColor: AppTheme.primary,
+          unselectedItemColor: AppTheme.textMute,
           selectedFontSize: 11,
           unselectedFontSize: 11,
           items: _tabIcons.map((tab) {

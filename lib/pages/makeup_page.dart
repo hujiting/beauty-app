@@ -315,7 +315,7 @@ class _MakeupPageState extends State<MakeupPage> {
 
         ElevatedButton(
           onPressed: () {
-            context.read<AppState>().saveStyleResult(_result!);
+            context.read<AppState>().toggleFavorite(1);
             setState(() {
               _result = null;
               _progress = 0;
