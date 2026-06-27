@@ -195,7 +195,7 @@ class CategoryPill extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             border: active
                 ? null
-                : const BorderSide(color: AppTheme.borderLight),
+                : Border.all(color: AppTheme.borderLight),
           ),
           child: Text(
             label,

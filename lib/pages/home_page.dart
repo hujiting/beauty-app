@@ -16,6 +16,23 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+// 风格卡片数据模型
+class _StyleItem {
+  final String name;
+  final int count;
+  const _StyleItem({required this.name, required this.count});
+}
+
+// 探索风格列表数据
+const List<_StyleItem> _styles = [
+  _StyleItem(name: '温柔风', count: 128),
+  _StyleItem(name: '职场范', count: 96),
+  _StyleItem(name: '复古感', count: 73),
+  _StyleItem(name: '街头潮', count: 54),
+  _StyleItem(name: '极简主义', count: 89),
+  _StyleItem(name: '法式浪漫', count: 67),
+];
+
 class _HomePageState extends State<HomePage> {
   final _scrollController = ScrollController();
   bool _showTitle = false;
@@ -115,8 +132,8 @@ class _HomePageState extends State<HomePage> {
                   childAspectRatio: 0.85,
                 ),
                 delegate: SliverChildBuilderDelegate(
-                  (context, i) => _StyleCard(style: styles[i]),
-                  childCount: styles.length,
+                  (context, i) => _StyleCard(style: _styles[i]),
+                  childCount: _styles.length,
                 ),
               ),
             ),
@@ -222,7 +239,7 @@ class _FeatureItem extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppTheme.radiusM),
             ),
             child: Icon(icon, color: color, size: 26),
@@ -314,7 +331,7 @@ class _RecommendList extends StatelessWidget {
 
 // 风格卡片
 class _StyleCard extends StatelessWidget {
-  final Style style;
+  final _StyleItem style;
   const _StyleCard({required this.style});
 
   @override
@@ -335,8 +352,8 @@ class _StyleCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppTheme.primary.withOpacity(0.3),
-                      AppTheme.accent.withOpacity(0.3),
+                      AppTheme.primary.withValues(alpha: 0.3),
+                      AppTheme.accent.withValues(alpha: 0.3),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -356,7 +373,7 @@ class _StyleCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.92),
+                    color: Colors.white.withValues(alpha: 0.92),
                     borderRadius: BorderRadius.circular(AppTheme.radiusS),
                   ),
                   child: Column(

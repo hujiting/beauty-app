@@ -12,7 +12,7 @@ import '../pages/style_page.dart';
 /// APP 统一路由配置
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
-  debugLogDiagnotics: true,
+  debugLogDiagnostics: true,
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, child) {

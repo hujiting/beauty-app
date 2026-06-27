@@ -7,11 +7,11 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:yueji_app/main.dart';
+import 'package:beauty_app/main.dart';
 
 void main() {
   testWidgets('App renders smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const YueJiApp());
+    await tester.pumpWidget(const MyApp());
     await tester.pumpAndSettle();
 
     // Verify the app renders with the home tab label

@@ -161,7 +161,7 @@ final _articles = [
     summary: '正确的护肤步骤能让护肤品发挥最大功效，避免浪费和皮肤负担。',
     emoji: '🧴',
     colors: [Color(0xFFE8D5D5), Color(0xFFD4A5A5)],
-
+    tag: '护肤攻略',
     likes: 128,
   ),
   _Article(
@@ -177,7 +177,7 @@ final _articles = [
     summary: '简单的面部按摩手法，促进面部血液循环，提升皮肤光泽。',
     emoji: '✨',
     colors: [Color(0xFFD4A5A5), Color(0xFFB88A8A)],
-
+    tag: '面部按摩',
     likes: 156,
   ),
   _Article(
@@ -185,7 +185,7 @@ final _articles = [
     summary: '紫外线是皮肤老化的最大元凶，科学防晒从今天开始。',
     emoji: '☀️',
     colors: [Color(0xFFC9B99A), Color(0xFFB88A8A)],
-
+    tag: '防晒知识',
     likes: 203,
   ),
   _Article(
@@ -193,7 +193,7 @@ final _articles = [
     summary: '睡眠不足会影响皮肤修复，导致暗沉、细纹等问题。',
     emoji: '🌙',
     colors: [Color(0xFFE8D5D5), Color(0xFFF0E6D6)],
-
+    tag: '睡眠健康',
     likes: 87,
   ),
 ];

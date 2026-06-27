@@ -107,7 +107,7 @@ class _ProductCard extends StatelessWidget {
   final Product product;
   final int index;
 
-  const _ProductCard({required this.product, required this.index});
+  _ProductCard({required this.product, required this.index});
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +118,7 @@ class _ProductCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppTheme.radiusM),
-        border: const Border.all(color: AppTheme.border),
+        border: Border.all(color: AppTheme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
