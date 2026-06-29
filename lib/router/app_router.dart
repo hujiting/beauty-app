@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../pages/home_page.dart';
 import '../pages/shop_page.dart';
-import '../pages/makeup_page.dart';
+import '../pages/beauty_lab_page.dart';
+import '../pages/wardrobe_page.dart';
+import '../pages/community_page.dart';
 import '../pages/profile_page.dart';
-import '../pages/capture_page.dart'; // 出片圣地
+import '../pages/capture_page.dart';
 import '../pages/wellness_page.dart';
 import '../pages/style_page.dart';
 import '../pages/skin_analysis_page.dart';
@@ -15,9 +17,9 @@ import '../pages/skincare_page.dart';
 import '../pages/outfit_page.dart';
 import '../pages/hairstyle_page.dart';
 import '../pages/blogger_page.dart';
-import '../pages/community_page.dart';
+import '../pages/makeup_page.dart';
 
-/// APP 统一路由配置
+/// APP 统一路由配置 — 四层架构五大模块
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   routes: [
@@ -26,83 +28,40 @@ final GoRouter appRouter = GoRouter(
         return _MainShell(child: child, location: state.matchedLocation);
       },
       branches: [
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/',
-              builder: (context, state) => const HomePage(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/shop',
-              builder: (context, state) => const ShopPage(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/makeup',
-              builder: (context, state) => const MakeupPage(),
-              routes: [
-                GoRoute(
-                  path: 'skin',
-                  builder: (context, state) => const SkinAnalysisPage(),
-                ),
-                GoRoute(
-                  path: 'hair',
-                  builder: (context, state) => const HairAnalysisPage(),
-                ),
-              ],
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/profile',
-              builder: (context, state) => const ProfilePage(),
-            ),
-          ],
-        ),
+        // 模块一：我的管家
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/', builder: (context, state) => const HomePage()),
+        ]),
+        // 模块二：妆造实验室
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/lab', builder: (context, state) => const BeautyLabPage()),
+        ]),
+        // 模块三：智能衣橱
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/wardrobe', builder: (context, state) => const WardrobePage()),
+        ]),
+        // 模块四：变美商城
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/shop', builder: (context, state) => const ShopPage()),
+        ]),
+        // 模块五：美圈社区
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/community', builder: (context, state) => const CommunityPage()),
+        ]),
       ],
     ),
     // 非 Tab 页面
-    GoRoute(
-      path: '/capture',
-      builder: (context, state) => const CapturePage(),
-    ),
-    GoRoute(
-      path: '/wellness',
-      builder: (context, state) => const WellnessPage(),
-    ),
-    GoRoute(
-      path: '/style',
-      builder: (context, state) => const StylePage(),
-    ),
-    GoRoute(
-      path: '/skincare',
-      builder: (context, state) => const SkincarePage(),
-    ),
-    GoRoute(
-      path: '/outfit',
-      builder: (context, state) => const OutfitPage(),
-    ),
-    GoRoute(
-      path: '/hairstyle',
-      builder: (context, state) => const HairstylePage(),
-    ),
-    GoRoute(
-      path: '/bloggers',
-      builder: (context, state) => const BloggerPage(),
-    ),
-    GoRoute(
-      path: '/community',
-      builder: (context, state) => const CommunityPage(),
-    ),
+    GoRoute(path: '/profile', builder: (context, state) => const ProfilePage()),
+    GoRoute(path: '/capture', builder: (context, state) => const CapturePage()),
+    GoRoute(path: '/wellness', builder: (context, state) => const WellnessPage()),
+    GoRoute(path: '/style', builder: (context, state) => const StylePage()),
+    GoRoute(path: '/skincare', builder: (context, state) => const SkincarePage()),
+    GoRoute(path: '/outfit', builder: (context, state) => const OutfitPage()),
+    GoRoute(path: '/hairstyle', builder: (context, state) => const HairstylePage()),
+    GoRoute(path: '/bloggers', builder: (context, state) => const BloggerPage()),
+    GoRoute(path: '/makeup', builder: (context, state) => const MakeupPage()),
+    GoRoute(path: '/skin-analysis', builder: (context, state) => const SkinAnalysisPage()),
+    GoRoute(path: '/hair-analysis', builder: (context, state) => const HairAnalysisPage()),
   ],
 );
 
@@ -112,17 +71,19 @@ class _MainShell extends StatelessWidget {
   const _MainShell({required this.child, required this.location});
 
   int get _currentIndex {
-    if (location.startsWith('/shop')) return 1;
-    if (location.startsWith('/makeup')) return 2;
-    if (location.startsWith('/profile')) return 3;
+    if (location.startsWith('/lab')) return 1;
+    if (location.startsWith('/wardrobe')) return 2;
+    if (location.startsWith('/shop')) return 3;
+    if (location.startsWith('/community')) return 4;
     return 0;
   }
 
   static const _tabIcons = [
     (icon: Icons.auto_awesome_outlined, activeIcon: Icons.auto_awesome, label: '管家'),
+    (icon: Icons.science_outlined, activeIcon: Icons.science, label: '妆造'),
+    (icon: Icons.checkroom_outlined, activeIcon: Icons.checkroom, label: '衣橱'),
     (icon: Icons.store_outlined, activeIcon: Icons.store, label: '商城'),
-    (icon: Icons.brush_outlined, activeIcon: Icons.brush, label: '妆容'),
-    (icon: Icons.person_outline, activeIcon: Icons.person, label: '我的'),
+    (icon: Icons.group_outlined, activeIcon: Icons.group, label: '美圈'),
   ];
 
   @override
@@ -144,7 +105,7 @@ class _MainShell extends StatelessWidget {
         child: BottomNavigationBar(
           currentIndex: idx,
           onTap: (i) {
-            final paths = ['/', '/shop', '/makeup', '/profile'];
+            final paths = ['/', '/lab', '/wardrobe', '/shop', '/community'];
             context.go(paths[i]);
           },
           type: BottomNavigationBarType.fixed,
@@ -152,8 +113,8 @@ class _MainShell extends StatelessWidget {
           elevation: 0,
           selectedItemColor: AppTheme.primary,
           unselectedItemColor: AppTheme.textMute,
-          selectedFontSize: 11,
-          unselectedFontSize: 11,
+          selectedFontSize: 10,
+          unselectedFontSize: 10,
           items: _tabIcons.map((tab) {
             final i = _tabIcons.indexOf(tab);
             return BottomNavigationBarItem(

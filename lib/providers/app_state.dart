@@ -1,10 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../data.dart';
+import '../models/data_models.dart';
+import '../models/ai_engine.dart';
 
-/// APP 全局状态管理 — 私人变美管家
+/// APP 全局状态管理 — 私人变美管家（四层架构版）
 class AppState extends ChangeNotifier {
   // ============ 基础用户数据 ============
   String _userName = '变美管家';
@@ -17,7 +18,7 @@ class AppState extends ChangeNotifier {
   bool _onboardingComplete = false;
   bool get onboardingComplete => _onboardingComplete;
 
-  String? _gender; // 'male' or 'female'
+  String? _gender;
   String? get gender => _gender;
   bool get isFemale => _gender == 'female';
 
@@ -27,35 +28,60 @@ class AppState extends ChangeNotifier {
   String? _skinKeyword;
   String? get skinKeyword => _skinKeyword;
 
+  // ============ 第一层：数据基石 ============
+  BodyProfile _bodyProfile = const BodyProfile();
+  BodyProfile get bodyProfile => _bodyProfile;
+
+  FaceProfile _faceProfile = const FaceProfile();
+  FaceProfile get faceProfile => _faceProfile;
+
+  SkinHairProfile _skinHairProfile = const SkinHairProfile();
+  SkinHairProfile get skinHairProfile => _skinHairProfile;
+
+  StylePreference _stylePreference = const StylePreference();
+  StylePreference get stylePreference => _stylePreference;
+
+  // 动态衣橱
+  final List<WardrobeItem> _wardrobe = [];
+  List<WardrobeItem> get wardrobe => _wardrobe;
+
+  // 场景数据
+  String _userCity = '上海';
+  String get userCity => _userCity;
+
+  // ============ 第二层：分析历史 ============
+  final List<SkinAnalysisResult> _skinAnalysisHistory = [];
+  List<SkinAnalysisResult> get skinAnalysisHistory => _skinAnalysisHistory;
+
+  final List<HairAnalysisResult> _hairAnalysisHistory = [];
+  List<HairAnalysisResult> get hairAnalysisHistory => _hairAnalysisHistory;
+
+  // ============ 第三层：每日护肤打卡 ============
+  final Map<String, bool> _skincareToday = {};
+  Map<String, bool> get skincareToday => _skincareToday;
+
+  final List<String> _skincareSteps = [
+    '洁面', '爽肤水', '精华', '乳液/面霜', '防晒',
+  ];
+  List<String> get skincareSteps => _skincareSteps;
+
+  // ============ 第四层：运营 ============
+  VipLevel _vipLevel = VipLevel.free;
+  VipLevel get vipLevel => _vipLevel;
+  bool get isVip => _vipLevel != VipLevel.free;
+
   // ============ 收藏 ============
   final Set<int> _favoriteProductIds = {};
   Set<int> get favoriteProductIds => _favoriteProductIds;
   bool isFavorite(int id) => _favoriteProductIds.contains(id);
 
-  // ============ 肤质/发质分析历史 ============
-  final List<Map<String, dynamic>> _skinAnalysisHistory = [];
-  List<Map<String, dynamic>> get skinAnalysisHistory => _skinAnalysisHistory;
-
-  final List<Map<String, dynamic>> _hairAnalysisHistory = [];
-  List<Map<String, dynamic>> get hairAnalysisHistory => _hairAnalysisHistory;
-
-  // ============ 每日护肤打卡 ============
-  final Map<String, bool> _skincareToday = {};
-  Map<String, bool> get skincareToday => _skincareToday;
-
-  final List<String> _skincareSteps = [
-    '洁面',
-    '爽肤水',
-    '精华',
-    '乳液/面霜',
-    '防晒',
-  ];
-  List<String> get skincareSteps => _skincareSteps;
-
-  // ============ 出片圣地收藏 ============
   final Set<String> _favoriteSpots = {};
   Set<String> get favoriteSpots => _favoriteSpots;
   bool isSpotFavorite(String spotName) => _favoriteSpots.contains(spotName);
+
+  // ============ 待办事项 ============
+  final List<TodoItem> _todos = [];
+  List<TodoItem> get todos => _todos;
 
   // ============ 初始化 ============
   Future<void> init() async {
@@ -66,42 +92,89 @@ class AppState extends ChangeNotifier {
     _gender = prefs.getString('gender');
     _styleResult = prefs.getString('style_result');
     _skinKeyword = prefs.getString('skin_keyword');
+    _userCity = prefs.getString('user_city') ?? '上海';
 
-    // 护肤今日打卡
+    // 加载档案数据
+    final bodyJson = prefs.getString('body_profile');
+    if (bodyJson != null) _bodyProfile = BodyProfile.fromJson(jsonDecode(bodyJson));
+    final faceJson = prefs.getString('face_profile');
+    if (faceJson != null) _faceProfile = FaceProfile.fromJson(jsonDecode(faceJson));
+    final skinHairJson = prefs.getString('skin_hair_profile');
+    if (skinHairJson != null) _skinHairProfile = SkinHairProfile.fromJson(jsonDecode(skinHairJson));
+    final stylePrefJson = prefs.getString('style_preference');
+    if (stylePrefJson != null) _stylePreference = StylePreference.fromJson(jsonDecode(stylePrefJson));
+
+    // 加载衣橱
+    final wardrobeJson = prefs.getStringList('wardrobe') ?? [];
+    for (final item in wardrobeJson) {
+      _wardrobe.add(WardrobeItem.fromJson(jsonDecode(item)));
+    }
+
+    // 护肤打卡
     final today = DateTime.now().toIso8601String().substring(0, 10);
-    final skincareKey = 'skincare_$today';
-    final skincareDone = prefs.getStringList(skincareKey) ?? [];
+    final skincareDone = prefs.getStringList('skincare_$today') ?? [];
     for (final step in _skincareSteps) {
       _skincareToday[step] = skincareDone.contains(step);
     }
 
-    // 肤质分析历史
-    final skinHistory = prefs.getStringList('skin_history') ?? [];
-    for (final item in skinHistory) {
-      final parts = item.split('|');
-      if (parts.length >= 3) {
-        _skinAnalysisHistory.add({
-          'date': parts[0],
-          'result': parts[1],
-          'summary': parts[2],
-        });
-      }
-    }
+    // 分析历史
+    _loadSkinHistory(prefs);
+    _loadHairHistory(prefs);
 
-    // 发质分析历史
-    final hairHistory = prefs.getStringList('hair_history') ?? [];
-    for (final item in hairHistory) {
-      final parts = item.split('|');
-      if (parts.length >= 3) {
-        _hairAnalysisHistory.add({
-          'date': parts[0],
-          'result': parts[1],
-          'summary': parts[2],
-        });
-      }
-    }
+    // 收藏
+    final favIds = prefs.getStringList('favorite_ids') ?? [];
+    _favoriteProductIds.addAll(favIds.map((id) => int.parse(id)));
+    final favSpots = prefs.getStringList('favorite_spots') ?? [];
+    _favoriteSpots.addAll(favSpots);
+
+    // 待办
+    _generateTodos();
 
     notifyListeners();
+  }
+
+  void _loadSkinHistory(SharedPreferences prefs) {
+    final history = prefs.getStringList('skin_history') ?? [];
+    for (final item in history) {
+      final parts = item.split('|');
+      if (parts.length >= 3) {
+        _skinAnalysisHistory.insert(0, SkinAnalysisResult(
+          type: parts[1], hydration: 50, oiliness: 50, smoothness: 50,
+          sensitivity: 30, darkSpots: 20, pores: 30,
+          summary: parts[2], recommendations: [],
+        ));
+      }
+    }
+  }
+
+  void _loadHairHistory(SharedPreferences prefs) {
+    final history = prefs.getStringList('hair_history') ?? [];
+    for (final item in history) {
+      final parts = item.split('|');
+      if (parts.length >= 3) {
+        _hairAnalysisHistory.insert(0, HairAnalysisResult(
+          type: parts[1], damage: '轻度受损', scalpCondition: '正常',
+          hairDensity: '正常', summary: parts[2], recommendations: [],
+        ));
+      }
+    }
+  }
+
+  void _generateTodos() {
+    _todos.clear();
+    // 护肤提醒
+    if (_skincareToday.values.any((v) => !v)) {
+      _todos.add(TodoItem(title: '完成今日护肤步骤', icon: Icons.spa_outlined, type: TodoType.skincare));
+    }
+    // 去角质提醒（每2周）
+    _todos.add(TodoItem(title: '该去角质的日子到了', icon: Icons.face_retouching_natural, type: TodoType.exfoliate));
+    // 理发提醒（每月）
+    _todos.add(TodoItem(title: '该剪头发了', icon: Icons.cut, type: TodoType.haircut));
+    // 衣橱整理提醒
+    if (_wardrobe.any((w) => w.shouldRemove)) {
+      final count = _wardrobe.where((w) => w.shouldRemove).length;
+      _todos.add(TodoItem(title: '$count件衣物建议断舍离', icon: Icons.delete_outline, type: TodoType.wardrobe));
+    }
   }
 
   // ============ 完成引导 ============
@@ -123,7 +196,107 @@ class AppState extends ChangeNotifier {
     await prefs.setString('skin_keyword', skinKeyword);
   }
 
-  // ============ 切换收藏 ============
+  // ============ 更新档案 ============
+  Future<void> updateBodyProfile(BodyProfile profile) async {
+    _bodyProfile = profile;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('body_profile', jsonEncode(profile.toJson()));
+  }
+
+  Future<void> updateFaceProfile(FaceProfile profile) async {
+    _faceProfile = profile;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('face_profile', jsonEncode(profile.toJson()));
+  }
+
+  Future<void> updateSkinHairProfile(SkinHairProfile profile) async {
+    _skinHairProfile = profile;
+    _skinKeyword = profile.skincareFocus;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('skin_hair_profile', jsonEncode(profile.toJson()));
+    await prefs.setString('skin_keyword', profile.skincareFocus);
+  }
+
+  Future<void> updateStylePreference(StylePreference pref) async {
+    _stylePreference = pref;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('style_preference', jsonEncode(pref.toJson()));
+  }
+
+  Future<void> updateCity(String city) async {
+    _userCity = city;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_city', city);
+  }
+
+  // ============ 衣橱管理 ============
+  Future<void> addWardrobeItem(WardrobeItem item) async {
+    _wardrobe.insert(0, item);
+    _generateTodos();
+    notifyListeners();
+    await _saveWardrobe();
+  }
+
+  Future<void> removeWardrobeItem(String id) async {
+    _wardrobe.removeWhere((w) => w.id == id);
+    notifyListeners();
+    await _saveWardrobe();
+  }
+
+  Future<void> recordWardrobeWorn(String id) async {
+    final item = _wardrobe.firstWhere((w) => w.id == id);
+    item.recordWorn();
+    notifyListeners();
+    await _saveWardrobe();
+  }
+
+  Future<void> _saveWardrobe() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      'wardrobe', _wardrobe.map((w) => jsonEncode(w.toJson())).toList(),
+    );
+  }
+
+  // ============ 肤质分析记录 ============
+  Future<void> addSkinAnalysis(SkinAnalysisResult result) async {
+    _skinAnalysisHistory.insert(0, result);
+    _generateTodos();
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    final history = _skinAnalysisHistory.map((e) =>
+      '${DateTime.now().toIso8601String().substring(0,10)}|${e.type}|${e.summary}'
+    ).toList();
+    await prefs.setStringList('skin_history', history);
+  }
+
+  // ============ 发质分析记录 ============
+  Future<void> addHairAnalysis(HairAnalysisResult result) async {
+    _hairAnalysisHistory.insert(0, result);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    final history = _hairAnalysisHistory.map((e) =>
+      '${DateTime.now().toIso8601String().substring(0,10)}|${e.type}|${e.summary}'
+    ).toList();
+    await prefs.setStringList('hair_history', history);
+  }
+
+  // ============ 护肤打卡 ============
+  Future<void> toggleSkincareStep(String step) async {
+    _skincareToday[step] = !(_skincareToday[step] ?? false);
+    _generateTodos();
+    notifyListeners();
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final prefs = await SharedPreferences.getInstance();
+    final done = _skincareToday.entries.where((e) => e.value).map((e) => e.key).toList();
+    await prefs.setStringList('skincare_$today', done);
+  }
+
+  // ============ 收藏 ============
   Future<void> toggleFavorite(int productId) async {
     if (_favoriteProductIds.contains(productId)) {
       _favoriteProductIds.remove(productId);
@@ -133,56 +306,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(
-      'favorite_ids',
-      _favoriteProductIds.map((id) => id.toString()).toList(),
+      'favorite_ids', _favoriteProductIds.map((id) => id.toString()).toList(),
     );
   }
 
-  // ============ 肤质分析记录 ============
-  Future<void> addSkinAnalysis({
-    required String result,
-    required String summary,
-  }) async {
-    final date = DateTime.now().toIso8601String().substring(0, 10);
-    _skinAnalysisHistory.insert(0, {
-      'date': date,
-      'result': result,
-      'summary': summary,
-    });
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    final history = _skinAnalysisHistory.map((e) => '${e['date']}|${e['result']}|${e['summary']}').toList();
-    await prefs.setStringList('skin_history', history);
-  }
-
-  // ============ 发质分析记录 ============
-  Future<void> addHairAnalysis({
-    required String result,
-    required String summary,
-  }) async {
-    final date = DateTime.now().toIso8601String().substring(0, 10);
-    _hairAnalysisHistory.insert(0, {
-      'date': date,
-      'result': result,
-      'summary': summary,
-    });
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    final history = _hairAnalysisHistory.map((e) => '${e['date']}|${e['result']}|${e['summary']}').toList();
-    await prefs.setStringList('hair_history', history);
-  }
-
-  // ============ 护肤打卡 ============
-  Future<void> toggleSkincareStep(String step) async {
-    _skincareToday[step] = !(_skincareToday[step] ?? false);
-    notifyListeners();
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    final prefs = await SharedPreferences.getInstance();
-    final done = _skincareToday.entries.where((e) => e.value).map((e) => e.key).toList();
-    await prefs.setStringList('skincare_$today', done);
-  }
-
-  // ============ 出片圣地收藏 ============
   Future<void> toggleSpotFavorite(String spotName) async {
     if (_favoriteSpots.contains(spotName)) {
       _favoriteSpots.remove(spotName);
@@ -211,4 +338,30 @@ class AppState extends ChangeNotifier {
     await prefs.setString('user_name', _userName);
     await prefs.setString('user_bio', _userBio);
   }
+
+  // ============ VIP ============
+  Future<void> upgradeToVip(VipLevel level) async {
+    _vipLevel = level;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('vip_level', level.index);
+  }
 }
+
+/// 待办事项
+class TodoItem {
+  final String title;
+  final IconData icon;
+  final TodoType type;
+  final bool done;
+
+  const TodoItem({
+    required this.title, required this.icon, required this.type, this.done = false,
+  });
+
+  TodoItem copyWith({bool? done}) => TodoItem(
+    title: title, icon: icon, type: type, done: done ?? this.done,
+  );
+}
+
+enum TodoType { skincare, exfoliate, haircut, wardrobe }

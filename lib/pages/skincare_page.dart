@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
-import '../widgets/common.dart';
+import '../models/ai_engine.dart';
 
 /// 护肤管理页 — 每日护肤步骤 + 肤质分析历史
 class SkincarePage extends StatefulWidget {
@@ -248,7 +247,7 @@ class _SkincareStepCard extends StatelessWidget {
 
 // ===== 分析历史记录 =====
 class _AnalysisHistory extends StatelessWidget {
-  final List<Map<String, dynamic>> items;
+  final List<dynamic> items;
   final IconData icon;
   const _AnalysisHistory({required this.items, required this.icon});
 
@@ -275,6 +274,20 @@ class _AnalysisHistory extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (_, i) {
         final item = items[i];
+        // 兼容 SkinAnalysisResult / HairAnalysisResult 对象
+        final String resultStr;
+        final String summaryStr;
+        if (item is SkinAnalysisResult) {
+          resultStr = item.type;
+          summaryStr = item.summary;
+        } else if (item is HairAnalysisResult) {
+          resultStr = item.type;
+          summaryStr = item.summary;
+        } else {
+          resultStr = (item as Map)['result'] ?? '';
+          summaryStr = item['summary'] ?? '';
+        }
+        final dateStr = (item is Map) ? (item['date'] ?? '') : DateTime.now().toIso8601String().substring(0, 10);
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -298,19 +311,19 @@ class _AnalysisHistory extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(item['result'] ?? '',
+                    child: Text(resultStr,
                         style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.textPrimary)),
                   ),
-                  Text(item['date'] ?? '',
+                  Text(dateStr,
                       style: const TextStyle(
                           fontSize: 12, color: AppTheme.textMute)),
                 ],
               ),
               const SizedBox(height: 10),
-              Text(item['summary'] ?? '',
+              Text(summaryStr,
                   style: const TextStyle(
                       fontSize: 13,
                       color: AppTheme.textSecondary,
